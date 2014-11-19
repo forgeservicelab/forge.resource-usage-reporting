@@ -6,6 +6,7 @@ from collections import defaultdict
 from openstack import OpenStackConnector
 import collections
 from plot2 import first
+from prettytable import PrettyTable
 
 def get_from_env_or_prompt(varname, echo=True):
     """Get an environment variable, if it exists, or query the user for it"""
@@ -31,6 +32,7 @@ def main():
     parser.add_argument('--screen_stats',help='To get statistics on screen (human readable)',action="store_true")
     parser.add_argument('--trend',help='plot trends',action="store_true")
     parser.add_argument('--julkict',help='count only julkict Projects',action="store_true",default=False)
+    parser.add_argument('--quotas',help='List tenant quotas only',action="store_true")
     args = parser.parse_args()
 
     if not (args.start and args.end):
@@ -48,6 +50,49 @@ def main():
     pstart = start
     end = datetime.fromtimestamp(time.mktime(
         time.strptime(args.end, "%Y-%m-%d")))
+
+    if args.quotas:
+        table = PrettyTable(['Project', 'Instances', 'VCPUs', 'Memory MB', 'Fixed IPs', 'Floating IPs', 'Keypairs', 'Sec groups', 'Sec group rules'])
+
+        if args.header and args.csv:
+            print '"Project","Instances","VCPUs","Memory MB","Fixed IPs","Floating IPs","Keypairs","Sec groups","Sec group rules"'
+
+        for tenant in osc.get_tenant_usages(start, start + timedelta(1)):
+            quotas = osc.get_tenant_quotas(tenant.get('tenant_id'))
+            tenant_id = tenant.get('tenant_id')
+            instances = quotas.get('instances')
+            cores = quotas.get('cores')
+            ram = quotas.get('ram')
+            fixed_ips = quotas.get('fixed_ips')
+            floating_ips = quotas.get('floating_ips')
+            key_pairs = quotas.get('key_pairs')
+            security_groups = quotas.get('security_groups')
+            security_group_rules = quotas.get('security_group_rules')
+            if args.csv:
+                print '"%s","%s","%s","%s","%s","%s","%s","%s","%s"' % (
+                    tenant_id,
+                    instances,
+                    cores,
+                    ram,
+                    fixed_ips,
+                    floating_ips,
+                    key_pairs,
+                    security_groups,
+                    security_group_rules)
+            else:
+                table.add_row([
+                    tenant_id,
+                    instances,
+                    cores,
+                    ram,
+                    fixed_ips,
+                    floating_ips,
+                    key_pairs,
+                    security_groups,
+                    security_group_rules])
+        if not args.csv:
+            print(table)
+        exit(0)
 
     if args.header and args.csv:
         print '"Date","Instance ID","VCPUs","Memory MB","Flavor","Project","State","Start","End"'
@@ -169,8 +214,6 @@ def main():
       print 'RAM utilisation percentage of total RAM %s GB: min %0.2f  max: %0.2f avg: %0.2f . ' % ( total_ram, (min_ram/1024.0)/total_ram*100, (max_ram/1024.0)/total_ram*100.0,(avg_ram/1024.0)/total_ram*100.0)
       print 'VCPUs: Min %s max %s and avg %s.' % (min_vcpus,max_vcpus,avg_vcpus)
       print 'CPU utilisation percentage of total %s VCPUS: min %0.2f  max: %0.2f avg: %0.2f . ' % ( total_vcpus, min_vcpus/1.0/total_vcpus*100.0, max_vcpus/1.0/total_vcpus*100.0, avg_vcpus/1.0/total_vcpus*100.0)
-
-
     # 1: DATE
     for key,value in sorted(vms.items()):
       vms_on_day = 0
@@ -197,5 +240,6 @@ def main():
     #   print '%s,%s,%s,%s'%(key, vms_on_day,ram_on_day,vcpus_on_day)
     if args.trend:
        first(vms,rams,vcpus,projects,vms_all,rams_all,vcpus_all,dates)
+
 if __name__ == '__main__':
     main()

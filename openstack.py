@@ -64,6 +64,22 @@ class OpenStackConnector(object):
 
         return encoded['tenant_usages']
 
+    def get_tenant_quotas(self, tenant):
+        try:
+            req = Request(self.compute_url +
+                          "/os-quota-sets/" + tenant)
+            self._upgrade_to_authenticated_request(req)
+            resp = urlopen(req)
+            content = resp.read().decode('utf-8')
+            encoded = json.loads(content)
+            resp.close()
+        except URLError as e:
+            raise Exception("Unable to connect compute service API: %s" % e)
+        except Exception as e:
+            raise Exception("Unable to process compute reponse: %s" % e)
+
+        return encoded['quota_set']
+
     def get_vm_info(self, tenant, instance_id):
         """Returns a detailed description of a running instance. In case the
         given instance_id does not exists or it is associated with an instance

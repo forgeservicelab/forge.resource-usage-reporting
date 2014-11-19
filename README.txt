@@ -1,9 +1,13 @@
 This Project contains tool(s) to report on
 - Project(s) resource usage
 - Utilisation (VCPUs, RAM) of the system
+- Quotas
 
-Example: 
+Example 1: 
 python usage2csv.py --start 2014-05-01 --end 2014-05-02 --screen_stats
+
+Example 2:
+python usage2csv.py --start 2014-05-01 --end 2014-05-02 --quotas
 
 Options:
 python usage2csv.py
@@ -11,7 +15,7 @@ python usage2csv.py
 Output formats: 
 - CSV for Excel 
 - Statistical information in text format 
-- graphical trending
+- graphical trending (not for quotas)
 
 TODO:
 - separate reporting for the big data nodes
@@ -22,5 +26,6 @@ TODO:
 
 
 Main author: jarno.laitinen@csc.fi
+
 
 
