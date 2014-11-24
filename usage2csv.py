@@ -52,10 +52,10 @@ def main():
         time.strptime(args.end, "%Y-%m-%d")))
 
     if args.quotas:
-        table = PrettyTable(['Project', 'Instances', 'VCPUs', 'Memory MB', 'Fixed IPs', 'Floating IPs', 'Keypairs', 'Sec groups', 'Sec group rules'])
+        table = PrettyTable(['Date', 'Project', 'Instances', 'VCPUs', 'Memory MB', 'Fixed IPs', 'Floating IPs', 'Keypairs', 'Sec groups', 'Sec group rules'])
 
         if args.header and args.csv:
-            print '"Project","Instances","VCPUs","Memory MB","Fixed IPs","Floating IPs","Keypairs","Sec groups","Sec group rules"'
+            print '"Date","Project","Instances","VCPUs","Memory MB","Fixed IPs","Floating IPs","Keypairs","Sec groups","Sec group rules"'
 
         for tenant in osc.get_tenant_usages(start, start + timedelta(1)):
             quotas = osc.get_tenant_quotas(tenant.get('tenant_id'))
@@ -69,7 +69,8 @@ def main():
             security_groups = quotas.get('security_groups')
             security_group_rules = quotas.get('security_group_rules')
             if args.csv:
-                print '"%s","%s","%s","%s","%s","%s","%s","%s","%s"' % (
+                print '"%s","%s","%s","%s","%s","%s","%s","%s","%s","%s"' % (
+                    time.strftime("%Y-%m-%d", pstart.timetuple()),
                     tenant_id,
                     instances,
                     cores,
@@ -81,6 +82,7 @@ def main():
                     security_group_rules)
             else:
                 table.add_row([
+                    time.strftime("%Y-%m-%d", pstart.timetuple()),
                     tenant_id,
                     instances,
                     cores,
