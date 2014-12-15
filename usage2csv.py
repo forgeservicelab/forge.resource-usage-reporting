@@ -57,41 +57,45 @@ def main():
         if args.header and args.csv:
             print '"Date","Project","Instances","VCPUs","Memory MB","Fixed IPs","Floating IPs","Keypairs","Sec groups","Sec group rules"'
 
-        for tenant in osc.get_tenant_usages(start, start + timedelta(1)):
-            quotas = osc.get_tenant_quotas(tenant.get('tenant_id'))
-            tenant_id = tenant.get('tenant_id')
-            instances = quotas.get('instances')
-            cores = quotas.get('cores')
-            ram = quotas.get('ram')
-            fixed_ips = quotas.get('fixed_ips')
-            floating_ips = quotas.get('floating_ips')
-            key_pairs = quotas.get('key_pairs')
-            security_groups = quotas.get('security_groups')
-            security_group_rules = quotas.get('security_group_rules')
-            if args.csv:
-                print '"%s","%s","%s","%s","%s","%s","%s","%s","%s","%s"' % (
-                    time.strftime("%Y-%m-%d", pstart.timetuple()),
-                    tenant_id,
-                    instances,
-                    cores,
-                    ram,
-                    fixed_ips,
-                    floating_ips,
-                    key_pairs,
-                    security_groups,
-                    security_group_rules)
-            else:
-                table.add_row([
-                    time.strftime("%Y-%m-%d", pstart.timetuple()),
-                    tenant_id,
-                    instances,
-                    cores,
-                    ram,
-                    fixed_ips,
-                    floating_ips,
-                    key_pairs,
-                    security_groups,
-                    security_group_rules])
+        dates = 0
+        while pstart <= end:
+            dates += 1
+            for tenant in osc.get_tenant_usages(pstart, pstart + timedelta(1)):
+                quotas = osc.get_tenant_quotas(tenant.get('tenant_id'))
+                tenant_id = tenant.get('tenant_id')
+                instances = quotas.get('instances')
+                cores = quotas.get('cores')
+                ram = quotas.get('ram')
+                fixed_ips = quotas.get('fixed_ips')
+                floating_ips = quotas.get('floating_ips')
+                key_pairs = quotas.get('key_pairs')
+                security_groups = quotas.get('security_groups')
+                security_group_rules = quotas.get('security_group_rules')
+                if args.csv:
+                    print '"%s","%s","%s","%s","%s","%s","%s","%s","%s","%s"' % (
+                        time.strftime("%Y-%m-%d", pstart.timetuple()),
+                        tenant_id,
+                        instances,
+                        cores,
+                        ram,
+                        fixed_ips,
+                        floating_ips,
+                        key_pairs,
+                        security_groups,
+                        security_group_rules)
+                else:
+                    table.add_row([
+                            time.strftime("%Y-%m-%d", pstart.timetuple()),
+                            tenant_id,
+                            instances,
+                            cores,
+                            ram,
+                            fixed_ips,
+                            floating_ips,
+                            key_pairs,
+                            security_groups,
+                            security_group_rules])
+            pstart = pstart + timedelta(1)
         if not args.csv:
             print(table)
         exit(0)
