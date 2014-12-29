@@ -59,7 +59,7 @@ def main():
        tenant_vols = defaultdict(defaultdict)
        vols = osc.get_volumes()
        if args.header and args.csv:
-          print 'Tenant,Volumes,Used_GBs'
+          print '\"Date\",\"Project\",\"Volumes\",\"Used_GBs\"'
        for vol in vols:
           # print 'Size: %s Status %s. belongs to Project %s '% (vol.get('size'),vol.get('status'), vol.get('os-vol-tenant-attr:tenant_id'))
           if tenant_vols.has_key(vol.get('os-vol-tenant-attr:tenant_id')):
