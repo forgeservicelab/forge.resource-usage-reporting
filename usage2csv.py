@@ -43,6 +43,16 @@ def main():
     auth_url = get_from_env_or_prompt('OS_AUTH_URL')
     osc = OpenStackConnector(username, password, tenant, auth_url)
 
+    # Start and end date
+    if not ( args.start and args.end ):
+       print '--start yyyy-mm-dd and --end yyyy-mm-dd is required to see quota and VM usage information.'
+       parser.print_help()
+       return
+    start = datetime.fromtimestamp(time.mktime(
+        time.strptime(args.start, "%Y-%m-%d")))
+    pstart = start
+    end = datetime.fromtimestamp(time.mktime(
+        time.strptime(args.end, "%Y-%m-%d")))
 
     # VOLUMES
     if args.volumes:
@@ -62,19 +72,8 @@ def main():
           if args.screen_stats and not args.csv:
              print 'Tenant %s has %s Volumes using total %s GB. ' % (key, tenant_vols[key]['vms'], tenant_vols[key]['sum_GB'] )
           if args.csv:
-             print '%s,%s,%s' % (key, tenant_vols[key]['vms'], tenant_vols[key]['sum_GB'] ) 
+             print '\"%s\",\"%s\",\"%s\",\"%s\"' % (time.strftime("%Y-%m-%d", start.timetuple()), key, tenant_vols[key]['vms'], tenant_vols[key]['sum_GB'] ) 
        exit(0) 
-
-    # Start and end date
-    if not ( args.start and args.end ):
-       print '--start yyyy-mm-dd and --end yyyy-mm-dd is required to see quota and VM usage information.'
-       parser.print_help()
-       return
-    start = datetime.fromtimestamp(time.mktime(
-        time.strptime(args.start, "%Y-%m-%d")))
-    pstart = start
-    end = datetime.fromtimestamp(time.mktime(
-        time.strptime(args.end, "%Y-%m-%d")))
 
     # Quotas
     if args.quotas:
