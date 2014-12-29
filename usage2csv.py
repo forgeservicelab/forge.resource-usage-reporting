@@ -77,10 +77,10 @@ def main():
 
     # Quotas
     if args.quotas:
-        table = PrettyTable(['Date', 'Project', 'Instances', 'VCPUs', 'Memory MB', 'Fixed IPs', 'Floating IPs', 'Keypairs', 'Sec groups', 'Sec group rules','Volume GBs','Volumes'])
+        table = PrettyTable(['Date', 'Project', 'Instances', 'VCPUs', 'Memory MB', 'Fixed IPs', 'Floating IPs', 'Keypairs', 'Sec groups', 'Sec group rules','Volumes','Volume GBs'])
 
         if args.header and args.csv:
-            print '"Date","Project","Instances","VCPUs","Memory MB","Fixed IPs","Floating IPs","Keypairs","Sec groups","Sec group rules","Volume GBs","Volumes"'
+            print '"Date","Project","Instances","VCPUs","Memory MB","Fixed IPs","Floating IPs","Keypairs","Sec groups","Sec group rules","Volumes","Volume GBs"'
 
         # Get Volume quota (current)
         dates = 0
@@ -119,8 +119,8 @@ def main():
                         key_pairs,
                         security_groups,
                         security_group_rules,
-                        tenant_vol_quotas[tenant.get('tenant_id')]['GBs'],
-                        tenant_vol_quotas[tenant.get('tenant_id')]['volumes']
+                        tenant_vol_quotas[tenant.get('tenant_id')]['volumes'],
+                        tenant_vol_quotas[tenant.get('tenant_id')]['GBs']
                     )
                 else:
                     table.add_row([
@@ -134,8 +134,8 @@ def main():
                             key_pairs,
                             security_groups,
                             security_group_rules,
-                            tenant_vol_quotas[tenant.get('tenant_id')]['GBs'],
-                            tenant_vol_quotas[tenant.get('tenant_id')]['volumes']])
+                            tenant_vol_quotas[tenant.get('tenant_id')]['volumes'],
+                            tenant_vol_quotas[tenant.get('tenant_id')]['GBs']])
             pstart = pstart + timedelta(1)
         if not args.csv:
             print(table)
