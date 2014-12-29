@@ -109,7 +109,7 @@ def main():
                 security_groups = quotas.get('security_groups')
                 security_group_rules = quotas.get('security_group_rules')
                 if args.csv:
-                    print '"%s","%s","%s","%s","%s","%s","%s","%s","%s","%s,%s,%s"' % (
+                    print '"%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s"' % (
                         time.strftime("%Y-%m-%d", pstart.timetuple()),
                         tenant_id,
                         instances,
