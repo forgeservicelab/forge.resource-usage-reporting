@@ -24,13 +24,27 @@ class OpenStackConnector(object):
 
         self._compute_urls = self._urls_from_catalog(self.service_catalog,
                                                      'compute')
-        self._metering_urls = self._urls_from_catalog(self.service_catalog,
-                                                      'metering')
+        #self._metering_urls = self._urls_from_catalog(self.service_catalog,
+        #                                              'metering')
+
+        self._volume_urls = self._urls_from_catalog(self.service_catalog,'volume')
+        #self._identity_urls = self._urls_from_catalog(self.service_catalog,'identity')
 
         if not self._compute_urls:
             raise Exception("No public URLs available for compute service")
-
         self.compute_url = self._compute_urls[0]
+
+        #if not self._metering_urls:
+        #    raise Exception("No public URLs available for metering service")
+        #self.metering_url = self._metering_urls[0]
+
+        if not self._volume_urls:
+            raise Exception("No public URLs available for volume service")
+        self.volume_url = self._volume_urls[0]
+
+        #if not self._identity_urls:
+        #    raise Exception("No public URLs available for identity service")
+        #self.identity_url = self._identity_urls[0]
 
     def get_token(self):
         headers = {'Content-Type': 'application/json',
@@ -44,6 +58,59 @@ class OpenStackConnector(object):
         resp = urlopen(req)
         content = resp.read().decode('utf-8')
         return json.loads(content)
+
+
+    def get_tenants(self):
+        try:
+            req = Request(self.identity_url + "/tenants" )
+            self._upgrade_to_authenticated_request(req)
+            resp = urlopen(req)
+            content = resp.read().decode('utf-8')
+            encoded = json.loads(content)
+            resp.close()
+        except URLError as e:
+            raise Exception("Unable to connect identity  service API: %s" % e)
+        except Exception as e:
+            raise Exception("Unable to process identity service reponse: %s" % e)
+
+        return encoded['tenant_list']
+
+
+
+    def get_volumes(self):
+        try:
+            req = Request(self.volume_url +  
+                          "/volumes/detail?all_tenants=1" )
+            self._upgrade_to_authenticated_request(req)
+            resp = urlopen(req)
+            content = resp.read().decode('utf-8')
+            encoded = json.loads(content)
+            resp.close()
+        except URLError as e:
+            raise Exception("Unable to connect volume service API: %s" % e)
+        except Exception as e:
+            raise Exception("Unable to process volume service reponse: %s" % e)
+
+        return encoded['volumes']
+
+    # https://forge-test.csc.fi:8780/v1/csc/os-quota-sets/csc
+    def get_volume_quota(self,tenant):
+        try:
+            req = Request(self.volume_url +
+                          "/os-quota-sets/"+tenant )
+            self._upgrade_to_authenticated_request(req)
+            resp = urlopen(req)
+            content = resp.read().decode('utf-8')
+            encoded = json.loads(content)
+            resp.close()
+        except URLError as e:
+            raise Exception("Unable to connect volume service API: %s" % e)
+        except Exception as e:
+            raise Exception("Unable to process volume service reponse: %s" % e)
+
+        return encoded['quota_set']
+
+
 
     def get_tenant_usages(self, start, end):
         try:
@@ -79,6 +146,27 @@ class OpenStackConnector(object):
             raise Exception("Unable to process compute reponse: %s" % e)
 
         return encoded['quota_set']
+
+    def get_hypervisor_info(self):
+        """Returns a detailed description of a hypervisor."""
+        try:
+            req = Request(self.compute_url +
+                          "/os-hypervisors/detail" )
+            self._upgrade_to_authenticated_request(req)
+            resp = urlopen(req)
+            content = resp.read().decode('utf-8')
+            encoded = json.loads(content)
+            resp.close()
+        except URLError as e:
+            return {}
+        except Exception as e:
+            raise Exception("Unable to process compute reponse: %s" % e)
+
+        return encoded['hypervisors']
+
+
+
+
 
     def get_vm_info(self, tenant, instance_id):
         """Returns a detailed description of a running instance. In case the

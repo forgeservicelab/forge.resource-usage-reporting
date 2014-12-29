@@ -23,45 +23,82 @@ def get_from_env_or_prompt(varname, echo=True):
 def main():
     import argparse
     parser = argparse.ArgumentParser(description='Reports OpenStack usage')
-    parser.add_argument('--start', dest='start', required=True, help='date e.g. 2014-01-01')
-    parser.add_argument('--end', dest='end', required=True, help='date e.g. 2014-02-01')
-    parser.add_argument('--with-header', dest='header', action='store_const',
-                        const=True, default=False)
+    parser.add_argument('--start', dest='start', help='date e.g. 2014-01-01')
+    parser.add_argument('--end', dest='end', help='date e.g. 2014-02-01')
+    parser.add_argument('--with-header', dest='header', action='store_const', const=True, default=False)
     parser.add_argument('--project',dest='project',required=False,help='Add name of Project if you want Project specific report',default=False)
     parser.add_argument('--csv',help='To get csv output instead of statistical summary',action="store_true")
     parser.add_argument('--screen_stats',help='To get statistics on screen (human readable)',action="store_true")
     parser.add_argument('--trend',help='plot trends',action="store_true")
     parser.add_argument('--julkict',help='count only julkict Projects',action="store_true",default=False)
     parser.add_argument('--quotas',help='List tenant quotas only',action="store_true")
+    parser.add_argument('--volumes',help='List volumes only.',action="store_true")
+
     args = parser.parse_args()
 
-    if not (args.start and args.end):
-        parser.print_help()
-        return
-
+    # AUTHENTICATION
     username = get_from_env_or_prompt('OS_USERNAME')
     password = get_from_env_or_prompt('OS_PASSWORD', echo=False)
     tenant = get_from_env_or_prompt('OS_TENANT_ID')
     auth_url = get_from_env_or_prompt('OS_AUTH_URL')
     osc = OpenStackConnector(username, password, tenant, auth_url)
 
+
+    # VOLUMES
+    if args.volumes:
+       tenant_vols = defaultdict(defaultdict)
+       vols = osc.get_volumes()
+       if args.header and args.csv:
+          print 'Tenant,Volumes,Used_GBs'
+       for vol in vols:
+          # print 'Size: %s Status %s. belongs to Project %s '% (vol.get('size'),vol.get('status'), vol.get('os-vol-tenant-attr:tenant_id'))
+          if tenant_vols.has_key(vol.get('os-vol-tenant-attr:tenant_id')):
+             tenant_vols[vol.get('os-vol-tenant-attr:tenant_id')]['vms'] += 1
+             tenant_vols[vol.get('os-vol-tenant-attr:tenant_id')]['sum_GB'] += vol.get('size')
+          else:
+             tenant_vols[vol.get('os-vol-tenant-attr:tenant_id')]['vms'] = 1
+             tenant_vols[vol.get('os-vol-tenant-attr:tenant_id')]['sum_GB'] = vol.get('size')
+       for key,value in sorted(tenant_vols.items()):
+          if args.screen_stats and not args.csv:
+             print 'Tenant %s has %s Volumes using total %s GB. ' % (key, tenant_vols[key]['vms'], tenant_vols[key]['sum_GB'] )
+          if args.csv:
+             print '%s,%s,%s' % (key, tenant_vols[key]['vms'], tenant_vols[key]['sum_GB'] ) 
+       exit(0) 
+
+    # Start and end date
+    if not ( args.start and args.end ):
+       print '--start yyyy-mm-dd and --end yyyy-mm-dd is required to see quota and VM usage information.'
+       parser.print_help()
+       return
     start = datetime.fromtimestamp(time.mktime(
         time.strptime(args.start, "%Y-%m-%d")))
     pstart = start
     end = datetime.fromtimestamp(time.mktime(
         time.strptime(args.end, "%Y-%m-%d")))
 
+    # Quotas
     if args.quotas:
-        table = PrettyTable(['Date', 'Project', 'Instances', 'VCPUs', 'Memory MB', 'Fixed IPs', 'Floating IPs', 'Keypairs', 'Sec groups', 'Sec group rules'])
+        table = PrettyTable(['Date', 'Project', 'Instances', 'VCPUs', 'Memory MB', 'Fixed IPs', 'Floating IPs', 'Keypairs', 'Sec groups', 'Sec group rules','Volume GBs','Volumes'])
 
         if args.header and args.csv:
-            print '"Date","Project","Instances","VCPUs","Memory MB","Fixed IPs","Floating IPs","Keypairs","Sec groups","Sec group rules"'
+            print '"Date","Project","Instances","VCPUs","Memory MB","Fixed IPs","Floating IPs","Keypairs","Sec groups","Sec group rules","Volume GBs","Volumes"'
 
+        # Get Volume quota (current)
         dates = 0
+        tenant_vol_quotas= defaultdict(defaultdict)
         while pstart <= end:
             dates += 1
             for tenant in osc.get_tenant_usages(pstart, pstart + timedelta(1)):
                 quotas = osc.get_tenant_quotas(tenant.get('tenant_id'))
+
+                # Volume quota is not time dependent so it is enough to fetch the quota once
+                # {"quota_set": {"snapshots_Default": -1, "gigabytes_Default": -1, 
+                # "gigabytes": 10000, "volumes_Default": -1, "snapshots": 10, "volumes": 50, "id": "csc"}}
+                if not tenant_vol_quotas.has_key(tenant.get('tenant_id')):
+                   vol_quota_set = osc.get_volume_quota(tenant.get('tenant_id'))
+                   tenant_vol_quotas[tenant.get('tenant_id')]['GBs'] = vol_quota_set['gigabytes']
+                   tenant_vol_quotas[tenant.get('tenant_id')]['volumes'] = vol_quota_set['volumes']
+
                 tenant_id = tenant.get('tenant_id')
                 instances = quotas.get('instances')
                 cores = quotas.get('cores')
@@ -72,7 +109,7 @@ def main():
                 security_groups = quotas.get('security_groups')
                 security_group_rules = quotas.get('security_group_rules')
                 if args.csv:
-                    print '"%s","%s","%s","%s","%s","%s","%s","%s","%s","%s"' % (
+                    print '"%s","%s","%s","%s","%s","%s","%s","%s","%s","%s,%s,%s"' % (
                         time.strftime("%Y-%m-%d", pstart.timetuple()),
                         tenant_id,
                         instances,
@@ -82,7 +119,10 @@ def main():
                         floating_ips,
                         key_pairs,
                         security_groups,
-                        security_group_rules)
+                        security_group_rules,
+                        tenant_vol_quotas[tenant.get('tenant_id')]['GBs'],
+                        tenant_vol_quotas[tenant.get('tenant_id')]['volumes']
+                    )
                 else:
                     table.add_row([
                             time.strftime("%Y-%m-%d", pstart.timetuple()),
@@ -94,12 +134,15 @@ def main():
                             floating_ips,
                             key_pairs,
                             security_groups,
-                            security_group_rules])
+                            security_group_rules,
+                            tenant_vol_quotas[tenant.get('tenant_id')]['GBs'],
+                            tenant_vol_quotas[tenant.get('tenant_id')]['volumes']])
             pstart = pstart + timedelta(1)
         if not args.csv:
             print(table)
         exit(0)
 
+    # VMs
     if args.header and args.csv:
         print '"Date","Instance ID","VCPUs","Memory MB","Flavor","Project","State","Start","End"'
     vms=defaultdict(defaultdict)
@@ -212,6 +255,7 @@ def main():
       avg_vms = sum_vms/dates
       avg_ram = sum_ram/dates
       avg_vcpus = sum_vcpus/dates
+    # hard coded total resources
     total_ram = 13*128
     total_vcpus = 13*2*8*2*2 # 13 nodes, 2 CPUS, 8 cores, 2x due Hyper-Threading, 2x due overbooking
     if args.screen_stats and not args.csv:
