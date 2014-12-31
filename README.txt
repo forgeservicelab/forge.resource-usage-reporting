@@ -42,10 +42,15 @@ Output formats:
 
 TODO:
 - separate reporting for the big data nodes
-- better precision to take into account VM run time 
-  - Now all VM are counted per day  and assumed to be concurrently running
-    whether or not their life time was 1 min or 24 h
 
+KNOWN WEAKNESSES / "FEATURES"
+- Instances are counted per day  and assumed to be concurrently running
+  whether or not their life time was 1 min or 24 h. 
+  This may show higher utilisation than there in reality is. 
+- No zero statistics is reported for the project which do not have any Volumes
+  (on current day when the script is run) or Instances (between start and end)
+- Volumes, Quotas and Instances cannot be used in same run. 
+  First is Volumes, then Quotas and if still not exited, then Instances.
 
 Main author: jarno.laitinen@csc.fi
 
